@@ -9,8 +9,9 @@ import androidx.compose.runtime.Composable
 class EventDetailActivity : ComponentActivity(){
     override fun onCreate(savedInstanceState: Bundle?){
         super.onCreate(savedInstanceState)
+        val event = intent.getSerializableExtra("event") as? IsenEvent
         setContent {
-            EventDetailScreen()
+            EventDetailScreen(event = event)
         }
     }
 }
