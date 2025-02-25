@@ -2,9 +2,6 @@ package fr.isen.casolari.isensmartcompanion
 
 import android.app.Activity
 import android.content.Intent
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -14,22 +11,21 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import fr.isen.casolari.isensmartcompanion.ui.theme.ISENSmartCompanionTheme
 
 data class ISEvent(
     val title: String,
@@ -133,21 +129,27 @@ fun EventItem(event: IsenEvent, onClick: () -> Unit) {
 fun EventDetailScreen(event: IsenEvent?) {
     val activity = LocalContext.current as? Activity
 
-    Scaffold(
+    /*Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(text = "Détails de l'événement") },
                 navigationIcon = {
                     IconButton(onClick = { activity?.finish() }) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            imageVector = Icons.Default.ArrowDropDown,
                             contentDescription = "Retour"
                         )
                     }
                 }
             )
         }
-    ) { innerPadding ->
+    ) { innerPadding ->*/
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
         if (event != null) {
             Column(modifier = Modifier.padding(70.dp)) {
                 Text(
@@ -175,6 +177,61 @@ fun EventDetailScreen(event: IsenEvent?) {
             }
         } else {
             Text(text = "Aucun événement trouvé")
+        }
+        // Spacer avec weight pour occuper tout l'espace restant et pousser le bouton vers le bas
+        Spacer(modifier = Modifier.weight(1f))
+
+        // Bouton "Retour" qui, lorsqu'il est cliqué, ferme l'activité
+        Button(
+            onClick = { activity?.finish() },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(text = "Retour")
+        }
+    }
+}
+
+@Composable
+fun DynamicEventsScreen() {
+    // État pour stocker la liste des événements récupérés
+    var eventsList by remember { mutableStateOf<List<IsenEvent>>(emptyList()) }
+    // État pour signaler le chargement ou une erreur si besoin
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    // Lance une coroutine dès que le composable est créé
+    LaunchedEffect(Unit) {
+        try {
+            // Appel à l'API pour récupérer la map d'événements
+            val response = RetrofitInstance.api.getEvents()
+            // Convertir la map en liste
+            eventsList = response.values.toList()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            errorMessage = "Erreur lors du chargement des événements."
+        }
+    }
+
+    // Si une erreur survient, on l'affiche
+    if (errorMessage != null) {
+        Text(
+            text = errorMessage ?: "",
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(16.dp)
+        )
+    } else {
+        // Affichage de la liste avec LazyColumn
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+        ) {
+            items(eventsList) { event ->
+                // On réutilise notre composable EventItem pour afficher chaque événement
+                EventItem(event = event) {
+                    // Par exemple, ici vous pouvez gérer le clic sur un événement
+                    // (comme lancer l'activité de détail)
+                }
+            }
         }
     }
 }
