@@ -25,13 +25,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
-
-data class ISEvent(
-    val title: String,
-    val date: String,
-    val location: String
-)
+import fr.isen.casolari.isensmartcompanion.network.RetrofitInstance
 
 
 @Composable
@@ -40,7 +36,7 @@ fun EventsScreen(){
 
     val events = listOf(
         IsenEvent(
-            id = 1,
+            id = "a",
             title = "Soirée BDE",
             description = "Une soirée animée par le BDE avec DJ et cocktails",
             date = "12/03/2025",
@@ -48,7 +44,7 @@ fun EventsScreen(){
             category = "BDE"
         ),
         IsenEvent(
-            id = 2,
+            id = "b",
             title = "Gala ISEN",
             description = "Gala annuel de l'ISEN avec dîner et remise de prix",
             date = "25/06/2025",
@@ -56,7 +52,7 @@ fun EventsScreen(){
             category = "Gala"
         ),
         IsenEvent(
-            id = 3,
+            id = "c",
             title = "Journée de Cohésion",
             description = "Activités de cohésion et team building pour les étudiants",
             date = "05/09/2025",
@@ -64,7 +60,7 @@ fun EventsScreen(){
             category = "Cohesion"
         ),
         IsenEvent(
-            id = 4,
+            id = "d",
             title = "Tournoi Sportif BDS",
             description = "Compétition sportive organisée par le BDS",
             date = "10/10/2025",
@@ -92,6 +88,11 @@ fun EventsScreen(){
 
 @Composable
 fun EventItem(event: IsenEvent, onClick: () -> Unit) {
+    /*val context = LocalContext.current
+    val intent = android.content.Intent(context, EventDetailActivity::class.java)
+    intent.putExtra("event", event)
+    context.startActivity(intent)*/
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -198,18 +199,21 @@ fun DynamicEventsScreen() {
     // État pour signaler le chargement ou une erreur si besoin
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
+    val context = LocalContext.current
+
     // Lance une coroutine dès que le composable est créé
     LaunchedEffect(Unit) {
         try {
             // Appel à l'API pour récupérer la map d'événements
             val response = RetrofitInstance.api.getEvents()
             // Convertir la map en liste
-            eventsList = response.values.toList()
+            eventsList = response
         } catch (e: Exception) {
             e.printStackTrace()
             errorMessage = "Erreur lors du chargement des événements."
         }
     }
+
 
     // Si une erreur survient, on l'affiche
     if (errorMessage != null) {
@@ -228,8 +232,13 @@ fun DynamicEventsScreen() {
             items(eventsList) { event ->
                 // On réutilise notre composable EventItem pour afficher chaque événement
                 EventItem(event = event) {
+
                     // Par exemple, ici vous pouvez gérer le clic sur un événement
+                    val intent = android.content.Intent(context, EventDetailActivity::class.java)
+                    intent.putExtra("event", event)
+                    context.startActivity(intent)
                     // (comme lancer l'activité de détail)
+
                 }
             }
         }

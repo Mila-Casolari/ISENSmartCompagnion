@@ -10,6 +10,9 @@ android {
     namespace = "fr.isen.casolari.isensmartcompanion"
     compileSdk = 35
 
+    buildFeatures {
+        buildConfig = true }
+
     defaultConfig {
         applicationId = "fr.isen.casolari.isensmartcompanion"
         minSdk = 24
@@ -18,6 +21,9 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        val geminiApiKey: String by project
+        buildConfigField("String", "GEMINI_API_KEY", "\"+GEMINI_API_KEY+")
     }
 
     buildTypes {
@@ -52,8 +58,9 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    implementation("com.squareup.retrofit2:retrofit:2.9.0")
-    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation(libs.retrofit)
+    implementation(libs.converter.gson)
+    implementation(libs.generativeai)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

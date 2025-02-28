@@ -1,4 +1,4 @@
-package fr.isen.casolari.isensmartcompanion
+package fr.isen.casolari.isensmartcompanion.network
 
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
