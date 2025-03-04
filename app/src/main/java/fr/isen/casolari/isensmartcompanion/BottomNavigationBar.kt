@@ -13,6 +13,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
+//import androidx.navigation.compose.findStartDestination
+
 
 
 
@@ -33,6 +35,7 @@ fun BottomNavigationBar(navController: NavController) {
 
     val navBackStackEntry = navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry.value?.destination?.route
+    val currentDestination = navController.currentBackStackEntry?.destination
 
     NavigationBar {
         items.forEach{ screen ->
@@ -41,7 +44,8 @@ fun BottomNavigationBar(navController: NavController) {
                 onClick = {
                     navController.navigate(screen.route){
                         popUpTo(navController.graph.startDestinationId){
-                            saveState = true
+                            inclusive = false
+                            //saveState = true
                         }
                         launchSingleTop = true
                         restoreState = true

@@ -6,6 +6,8 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+val geminiApiKey: String = project.findProperty("GEMINI_API_KEY") as String? ?: ""
+
 android {
     namespace = "fr.isen.casolari.isensmartcompanion"
     compileSdk = 35
@@ -22,8 +24,8 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        val geminiApiKey: String by project
-        buildConfigField("String", "GEMINI_API_KEY", "\"+GEMINI_API_KEY+")
+
+        buildConfigField("String", "GEMINI_API_KEY", "\"$geminiApiKey")
     }
 
     buildTypes {
@@ -33,6 +35,12 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+        debug {
+            buildConfigField("String", "GEMINI_API_KEY", "\"${project.findProperty("GEMINI_API_KEY")}\"")
+        }
+        release {
+            buildConfigField("String", "GEMINI_API_KEY", "\"${project.findProperty("GEMINI_API_KEY")}\"")
         }
     }
     compileOptions {

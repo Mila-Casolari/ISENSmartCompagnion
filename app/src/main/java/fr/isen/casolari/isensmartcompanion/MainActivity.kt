@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -45,6 +46,7 @@ import androidx.navigation.compose.rememberNavController
 import fr.isen.casolari.isensmartcompanion.ui.theme.ISENSmartCompanionTheme
 import kotlinx.coroutines.launch
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.navigation.NavController
 
 
 sealed class Screen(val route: String, val title: String) {
@@ -59,29 +61,125 @@ class MainActivity : ComponentActivity() {
         setContent {
             val navController = rememberNavController()
             ISENSmartCompanionTheme {
-                Scaffold(bottomBar = {
-                    BottomNavigationBar(navController)
-                }, modifier = Modifier.fillMaxSize()) { innerPadding ->
+                Scaffold(
+                    bottomBar = { BottomNavigationBar(navController) },
+                    modifier = Modifier.fillMaxSize()) { innerPadding ->
                     //MainScreen()
-                    //MainApp(innerPadding, navController)
-                    GeminiMainScreen(innerPadding)
+                    MainApp(innerPadding, navController)
+                    //GeminiMainScreen(innerPadding)
                 }
             }
         }
     }
 }
 
+//private operator fun String.component1(): Any {}
+
+//private operator fun String.component2(): Any { }
+
 @Composable
-fun GeminiMainScreen(innerPadding: PaddingValues) {
+fun MainScreenWithAI() {
+    val context = LocalContext.current
+
+    // Champs pour la question de l'utilisateur et la réponse
+    var userQuestion by remember { mutableStateOf("") }
+    var aiResponse by remember { mutableStateOf("En attente de question...") }
+
+    // On utilise un Column pour empiler verticalement
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        // ---------- Logo + Titre ----------
+        Image(
+            painter = painterResource(id = R.drawable.isen_logo_rn), // ton logo
+            contentDescription = "Logo ISEN",
+            modifier = Modifier
+                .size(100.dp)
+                .padding(bottom = 8.dp)
+        )
+
+        Text(
+            text = "ISEN",
+            style = MaterialTheme.typography.headlineMedium.copy(
+                fontWeight = FontWeight.Bold,
+                color = Color.Red
+            )
+        )
+        Text(
+            text = "Smart Companion",
+            style = MaterialTheme.typography.headlineMedium,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+
+        // ---------- Champ de texte pour la question ----------
+        TextField(
+            value = userQuestion,
+            onValueChange = { userQuestion = it },
+            label = { Text("Posez votre question") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        // ---------- Bouton pour envoyer la question ----------
+        Button(
+            onClick = {
+                if (userQuestion.isBlank()) {
+                    Toast.makeText(context, "Veuillez saisir une question", Toast.LENGTH_SHORT).show()
+                } else {
+                    // Appel IA
+                    analyzeWithGeminiAI(userQuestion) { response ->
+                        aiResponse = response
+                    }
+                    // On peut aussi effacer le champ de question si on veut
+                    // userQuestion = ""
+                }
+            },
+            modifier = Modifier.padding(top = 16.dp)
+        ) {
+            Text("Envoyer")
+        }
+
+        // ---------- Texte pour la réponse de l'IA ----------
+        Text(
+            text = aiResponse,
+            style = MaterialTheme.typography.headlineSmall,
+            modifier = Modifier.padding(top = 16.dp)
+        )
+    }
+}
+
+// Exemple de fonction qui appelle l’IA
+// (Ici, c’est juste un placeholder qui renvoie toujours la même forme de réponse)
+fun analyzeWithGeminiAI(input: String, onResult: (String) -> Unit) {
+    // Simuler un délai ou un appel réseau
+    // Dans la vraie version, tu utiliserais ton service Gemini ou la librairie Google AI
+    onResult("Réponse générée pour \"$input\"")
+}
+
+
+@Composable
+fun GeminiMainScreen(innerPadding: PaddingValues, navController: NavController) {
     var userQuestion by remember { mutableStateOf("") }
     // Liste des échanges (chaque élément contient question et réponse)
     val responses = remember { mutableStateListOf<String>() }
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     Column(modifier = Modifier
         .fillMaxSize()
+        .padding(innerPadding)
         .padding(16.dp)) {
+
+        Button(
+            onClick = { navController.navigate(Screen.Event.route) },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Aller aux événements")
+        }
 
         // Affiche le champ de texte
         TextField(
@@ -93,6 +191,8 @@ fun GeminiMainScreen(innerPadding: PaddingValues) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
+
+
         // Bouton Envoyer
         Button(
             onClick = {
@@ -101,8 +201,9 @@ fun GeminiMainScreen(innerPadding: PaddingValues) {
                         // Appel à GeminiAI pour analyser le texte
                         val aiResponse = GeminiAIService.analyzeText(userQuestion)
                         // Ajoute la question et la réponse à la liste des échanges
-                        responses.add("Q: $userQuestion")
-                        responses.add("A: $aiResponse")
+                        //responses.add("Q: $userQuestion")
+                        responses.add((userQuestion to aiResponse).toString())
+                        //responses.add("A: $aiResponse")
                         // Réinitialise le champ de saisie
                         userQuestion = ""
                     }
@@ -120,11 +221,12 @@ fun GeminiMainScreen(innerPadding: PaddingValues) {
         // Affiche la liste des échanges
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             items(responses) { response ->
-                Text(
-                    text = response,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(vertical = 4.dp)
-                )
+                //Text(text = "Q: $question", fontWeight = FontWeight.Bold)
+                Text(text = "A: $response", modifier=Modifier.padding(bottom = 8.dp))
+                    //text = response,
+                    //style = MaterialTheme.typography.bodyMedium,
+                    //modifier = Modifier.padding(vertical = 4.dp)
+
             }
         }
     }
@@ -139,7 +241,8 @@ fun MainApp(innerPadding: PaddingValues, navController: NavHostController) {
     ) {
         composable(Screen.Home.route) {
             //MainScreen()
-            GeminiMainScreen(innerPadding)
+            //GeminiMainScreen(innerPadding, navController)
+            MainScreenWithAI()
         }
         composable(Screen.Event.route) {
             //EventsScreen()
@@ -210,7 +313,7 @@ fun MainScreen() {
                 .padding(top = 16.dp)
         ) {
             Icon(
-                imageVector = Icons.Default.ArrowForward,
+                imageVector = Icons.Default.ArrowDropDown,
                 contentDescription = "Envoyer",
                 modifier = Modifier.padding(end = 8.dp)
             )
