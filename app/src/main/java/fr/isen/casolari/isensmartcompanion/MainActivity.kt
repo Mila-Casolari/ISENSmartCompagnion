@@ -4,327 +4,381 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.ArrowForward
-import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import fr.isen.casolari.isensmartcompanion.ui.theme.ISENSmartCompanionTheme
+import com.google.ai.client.generativeai.GenerativeModel
+import fr.isen.casolari.isensmartcompanion2.ui.theme.ISENSmartCompanion2Theme
+import android.util.Log
+import androidx.room.Database
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.navigation.NavController
+import kotlinx.coroutines.withContext
 
-
-sealed class Screen(val route: String, val title: String) {
-    object Home : Screen("home", "Home")
-    object Event : Screen("events", "Events")
-    object History : Screen("history", "History")
-}
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val db = AppDatabase.getDatabase(this)
+        enableEdgeToEdge()
         setContent {
-            val navController = rememberNavController()
-            ISENSmartCompanionTheme {
-                Scaffold(
-                    bottomBar = { BottomNavigationBar(navController) },
-                    modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    //MainScreen()
-                    MainApp(innerPadding, navController)
-                    //GeminiMainScreen(innerPadding)
+            ISENSmartCompanion2Theme {
+                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                    //val db = AppDatabase.getDatabase(this)
+                    AssistantScreen(db)
+                }
+                AppNavigator(db)
+            }
+        }
+    }
+}
+
+data class Message(val text: String, val isUser: Boolean)
+
+/*@Composable
+fun AssistantScreen() {
+    val context = LocalContext.current
+
+    val apiKey = BuildConfig.GEMINI_API_KEY
+    val model = GenerativeModel(apiKey, "gemini-1.5-flash")
+
+    var userInput by remember { mutableStateOf(TextFieldValue("")) }
+    var messages by remember { mutableStateOf(listOf<Message>()) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFFAF8FC)), // Couleur de fond légèrement grisâtre
+        contentAlignment = Alignment.TopCenter
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(60.dp))
+
+            //  Logo
+            Image(
+                painter = painterResource(id = R.drawable.logoisen), // Assure-toi que ton logo est dans res/drawable
+                contentDescription = "Logo ISEN",
+                modifier = Modifier
+                    .size(100.dp) // Taille du logo
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+            // Titre
+            Text(
+                text = "ISEN",
+                fontSize = 36.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFFB71C1C), // Rouge foncé
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Sous-titre
+            Text(
+                text = "Smart Companion",
+                fontSize = 18.sp,
+                color = Color.Gray,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            LazyColumn(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                reverseLayout = true
+            ) {
+                items(messages.reversed()){ message ->
+                    MessageBubble(message)
+                }
+            }
+
+            // Champ de saisie en bas de l'écran
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
+                    .background(Color(0xFFEDEDED), shape = RoundedCornerShape(50.dp)) // Fond gris clair arrondi
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextField(
+                    value = userInput,
+                    onValueChange = { userInput = it },
+                    placeholder = { Text("Posez votre question...") },
+                    modifier = Modifier
+                        .weight(1f)
+                        .background(Color.Transparent),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        disabledContainerColor = Color.Transparent
+                    )
+                )
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // Bouton circulaire avec icône
+                IconButton(
+                    onClick = {
+                        if(userInput.text.isNotBlank()) {
+
+
+                            Toast.makeText(context, "Question Submitted", Toast.LENGTH_SHORT).show()
+
+                            messages = messages + Message(userInput.text, isUser = true)
+
+                            val aiResponse = generateAIResponse(userInput.text)
+                            messages = messages + Message(aiResponse, isUser = false)
+
+                            userInput = TextFieldValue("")
+                        }
+
+                        // Action à effectuer quand on clique sur le bouton
+                    },
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFB71C1C)) // Rouge foncé
+                ) {
+                    Icon(
+                        painter = painterResource(id = android.R.drawable.ic_media_next), // Icône de flèche
+                        contentDescription = "Envoyer",
+                        tint = Color.White
+                    )
                 }
             }
         }
     }
 }
 
-//private operator fun String.component1(): Any {}
-
-//private operator fun String.component2(): Any { }
+fun generateAIResponse(input: String): String {
+    return when {
+        input.contains("bonjour", ignoreCase = true) -> "Bonjour ! Comment puis-je vous aider ?"
+        input.contains("temps", ignoreCase = true) -> "Je ne peux pas voir la météo, mais vous pouvez consulter une application météo."
+        input.contains("nom", ignoreCase = true) -> "Je suis ISEN Smart Companion !"
+        input.contains("aide", ignoreCase = true) -> "Bien sûr ! Dites-moi en quoi je peux vous aider."
+        input.contains("merci", ignoreCase = true) -> "Avec plaisir ! 😊"
+        else -> "Je suis une IA factice, mais je fais de mon mieux pour vous répondre !"
+    }
+}*/
 
 @Composable
-fun MainScreenWithAI() {
+fun AssistantScreen(db: AppDatabase) {
     val context = LocalContext.current
+    val apiKey = BuildConfig.GEMINI_API_KEY // ✅ Récupération sécurisée de la clé API
+    Log.d("AssistantScreen", "Clé API Gemini récupérée: $apiKey")
+    val model = GenerativeModel(apiKey, "gemini-1.5-flash") // ✅ Utilisation du modèle Gemini 1.5 Flash
+    val coroutineScope = rememberCoroutineScope()
+    //val db = AppDatabase.getDatabase(this)
+    val messageDao = db.messageDao()
+    var userInput by remember { mutableStateOf("") }
+    var messages by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
 
-    // Champs pour la question de l'utilisateur et la réponse
-    var userQuestion by remember { mutableStateOf("") }
-    var aiResponse by remember { mutableStateOf("En attente de question...") }
+    LaunchedEffect(Unit) {
+        //db.getAllMessages().collect { messages = it }
+        //messageDao.getAllMessages().collect { messages = it}
+        db.messageDao().getAllMessages().collect { messageEntities ->
+            messages = messageEntities.map { it.question to it.response }
+        }
+    }
 
-    // On utilise un Column pour empiler verticalement
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // ---------- Logo + Titre ----------
-        Image(
-            painter = painterResource(id = R.drawable.isen_logo_rn), // ton logo
-            contentDescription = "Logo ISEN",
+        // ✅ Affichage du titre + logo
+        Text(text = "Assistant IA Gemini", fontSize = 24.sp, modifier = Modifier.align(Alignment.CenterHorizontally))
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // ✅ Liste des messages sous forme de conversation
+        LazyColumn(
             modifier = Modifier
-                .size(100.dp)
-                .padding(bottom = 8.dp)
-        )
-
-        Text(
-            text = "ISEN",
-            style = MaterialTheme.typography.headlineMedium.copy(
-                fontWeight = FontWeight.Bold,
-                color = Color.Red
-            )
-        )
-        Text(
-            text = "Smart Companion",
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
-
-        // ---------- Champ de texte pour la question ----------
-        TextField(
-            value = userQuestion,
-            onValueChange = { userQuestion = it },
-            label = { Text("Posez votre question") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        // ---------- Bouton pour envoyer la question ----------
-        Button(
-            onClick = {
-                if (userQuestion.isBlank()) {
-                    Toast.makeText(context, "Veuillez saisir une question", Toast.LENGTH_SHORT).show()
-                } else {
-                    // Appel IA
-                    analyzeWithGeminiAI(userQuestion) { response ->
-                        aiResponse = response
-                    }
-                    // On peut aussi effacer le champ de question si on veut
-                    // userQuestion = ""
-                }
-            },
-            modifier = Modifier.padding(top = 16.dp)
+                .fillMaxWidth()
+                .weight(1f) // ✅ Permet de prendre tout l’espace dispo
         ) {
-            Text("Envoyer")
-        }
-
-        // ---------- Texte pour la réponse de l'IA ----------
-        Text(
-            text = aiResponse,
-            style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.padding(top = 16.dp)
-        )
-    }
-}
-
-// Exemple de fonction qui appelle l’IA
-// (Ici, c’est juste un placeholder qui renvoie toujours la même forme de réponse)
-fun analyzeWithGeminiAI(input: String, onResult: (String) -> Unit) {
-    // Simuler un délai ou un appel réseau
-    // Dans la vraie version, tu utiliserais ton service Gemini ou la librairie Google AI
-    onResult("Réponse générée pour \"$input\"")
-}
-
-
-@Composable
-fun GeminiMainScreen(innerPadding: PaddingValues, navController: NavController) {
-    var userQuestion by remember { mutableStateOf("") }
-    // Liste des échanges (chaque élément contient question et réponse)
-    val responses = remember { mutableStateListOf<String>() }
-    val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
-    val keyboardController = LocalSoftwareKeyboardController.current
-
-    Column(modifier = Modifier
-        .fillMaxSize()
-        .padding(innerPadding)
-        .padding(16.dp)) {
-
-        Button(
-            onClick = { navController.navigate(Screen.Event.route) },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Aller aux événements")
-        }
-
-        // Affiche le champ de texte
-        TextField(
-            value = userQuestion,
-            onValueChange = { userQuestion = it },
-            label = { Text("Posez votre question") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-
-
-        // Bouton Envoyer
-        Button(
-            onClick = {
-                if (userQuestion.isNotBlank()) {
-                    coroutineScope.launch {
-                        // Appel à GeminiAI pour analyser le texte
-                        val aiResponse = GeminiAIService.analyzeText(userQuestion)
-                        // Ajoute la question et la réponse à la liste des échanges
-                        //responses.add("Q: $userQuestion")
-                        responses.add((userQuestion to aiResponse).toString())
-                        //responses.add("A: $aiResponse")
-                        // Réinitialise le champ de saisie
-                        userQuestion = ""
-                    }
-                } else {
-                    Toast.makeText(context, "Veuillez saisir une question.", Toast.LENGTH_SHORT).show()
-                }
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Envoyer")
+            items(messages) { message ->
+                MessageBubble(message)
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Affiche la liste des échanges
-        LazyColumn(modifier = Modifier.fillMaxSize()) {
-            items(responses) { response ->
-                //Text(text = "Q: $question", fontWeight = FontWeight.Bold)
-                Text(text = "A: $response", modifier=Modifier.padding(bottom = 8.dp))
-                    //text = response,
-                    //style = MaterialTheme.typography.bodyMedium,
-                    //modifier = Modifier.padding(vertical = 4.dp)
-
-            }
-        }
-    }
-}
-
-@Composable
-fun MainApp(innerPadding: PaddingValues, navController: NavHostController) {
-    NavHost(
-        navController = navController,
-        startDestination = Screen.Home.route,
-        modifier = Modifier.padding(innerPadding)
-    ) {
-        composable(Screen.Home.route) {
-            //MainScreen()
-            //GeminiMainScreen(innerPadding, navController)
-            MainScreenWithAI()
-        }
-        composable(Screen.Event.route) {
-            //EventsScreen()
-            DynamicEventsScreen()
-        }
-        composable(Screen.History.route) {
-            HistoryScreen()
-        }
-
-    }
-}
-
-@Composable
-fun MainScreen() {
-    val context = LocalContext.current
-    // On stocke la question de l'utilisateur et la réponse (fausse pour l'instant) dans des variables réactives (states)
-    var userQuestion by remember { mutableStateOf("") }
-    var aiResponse by remember { mutableStateOf("En attente de question...") }
-
-    // On utilise une Column pour empiler verticalement les éléments
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),           // marge autour
-        horizontalAlignment = Alignment.CenterHorizontally,  // centre horizontalement
-        verticalArrangement = Arrangement.Center             // centre verticalement
-    ) {
-
-        // ---------- Logo + Titre ----------
-        // Remplace R.drawable.logo_isen par ton image dans les ressources
-        Image(
-            painter = painterResource(id = R.drawable.isen_logo_rn),
-            contentDescription = "Logo ISEN",
-            modifier = Modifier
-                .size(100.dp)
-                .padding(bottom = 8.dp)
-        )
-
-        Text(
-            text = "ISEN",
-            style = MaterialTheme.typography.headlineMedium.copy(
-                fontWeight = FontWeight.Bold,
-                color = Color.Red
-            )
-        )
-        Text(
-            text = "Smart Companion",
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
-
-        // ---------- Champ de texte pour la question ----------
-        TextField(
-            value = userQuestion,
-            onValueChange = { newText -> userQuestion = newText },
-            label = { Text("Posez votre question") },
+        // ✅ Champ de texte pour écrire une question
+        OutlinedTextField(
+            value = userInput,
+            onValueChange = { userInput = it },
+            label = { Text("Posez votre question...") },
             modifier = Modifier.fillMaxWidth()
         )
 
-        // ---------- Bouton pour envoyer la question ----------
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // ✅ Bouton pour envoyer la question
         Button(
             onClick = {
-                Toast.makeText(context, "Question Submitted", Toast.LENGTH_SHORT).show()
-                // Ici on simule une réponse "fausse". Plus tard, tu pourras appeler l'API d'IA.
-                aiResponse = "Tu as demandé : $userQuestion"
-            },
-            modifier = Modifier
-                .padding(top = 16.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.ArrowDropDown,
-                contentDescription = "Envoyer",
-                modifier = Modifier.padding(end = 8.dp)
-            )
-            Text("Envoyer")
-        }
+                if (userInput.isNotBlank()) {
+                    val question = userInput
+                    userInput = "" // ✅ Efface l’input après envoi
+                    //messages = messages + (question to "⏳ Analyse en cours...")
+                    messages = messages + MessageEntity(question = question, response = "⏳ Analyse en cours...")
 
-        // ---------- Texte pour la réponse de l'IA ----------
+                    coroutineScope.launch {
+                        try {
+
+                            val aiResponse = GeminiAI.analyzeText(question)
+                            val entry= MessageEntity(question = question, response = aiResponse)
+                            //val entry = HistoryEntry(question = question, answer = aiResponse)
+                            //val dao = db.messageDao()
+                            //dao.insert(message(question = question, answer = response))
+                            //question = ""
+                            //db.historyDao().insert(entry)
+                            messageDao.insertMessage(entry)
+                            messages = messages.dropLast(1) + (question to aiResponse)
+
+                        } catch (e: Exception) {
+                            Log.e("AssistantScreen", "Erreur: ${e.message}")
+                            messages = messages.dropLast(1) + (question to "Erreur : ${e.message}")
+                        }
+                    }
+
+
+                }
+            },
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        ) {
+            Text(text = "Envoyer")
+        }
+    }
+}
+
+/*@Composable
+fun MessageBubble(message: Message) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        contentAlignment = if (message.isUser) Alignment.CenterEnd else Alignment.CenterStart
+    ) {
         Text(
-            text = aiResponse,
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(top = 16.dp)
+            text = message.text,
+            fontSize = 16.sp,
+            color = Color.White,
+            modifier = Modifier
+                .background(
+                    if (message.isUser) Color(0xFFB71C1C) else Color(0xFF757575),
+                    shape = RoundedCornerShape(16.dp)
+                )
+                .padding(12.dp)
+        )
+    }
+}*/
+
+@Composable
+fun MessageBubble(message: Pair<String, String>) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp),
+        horizontalAlignment = Alignment.Start
+    ) {
+        Text(text = "👤 ${message.first}", fontSize = 18.sp, modifier = Modifier.padding(4.dp))
+        Text(
+            text = "🤖 ${message.second}",
+            fontSize = 16.sp,
+            color = Color.Gray,
+            modifier = Modifier.padding(4.dp)
         )
     }
 }
+
+
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewAssistantScreen() {
+    AssistantScreen()
+}
+
+
+@Composable
+fun AppNavigator(db: AppDatabase) {
+    val navController = rememberNavController()
+
+    Scaffold(
+        bottomBar = { BottomNavigationBar(navController) }
+    ) { innerPadding ->
+        NavHost(
+            navController = navController,
+            startDestination = "home",
+            modifier = Modifier.padding(innerPadding)
+        ) {
+            composable("home") { AssistantScreen(db) }
+            composable("events") { EventsScreen() }
+            composable("history") { HistoryScreen(db) }
+        }
+    }
+}
+
+@Composable
+fun BottomNavigationBar(navController: NavHostController) {
+    NavigationBar(
+        containerColor = Color(0xFFFAF8FC)
+    ) {
+        val items = listOf(
+            BottomNavItem("Home", "home"),
+            BottomNavItem("Events", "events"),
+            BottomNavItem("History", "history")
+        )
+
+
+        val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
+
+        items.forEach { item ->
+            NavigationBarItem(
+                selected = currentRoute == item.route,
+                onClick = { navController.navigate(item.route) },
+                icon = { /* Icône si besoin */ },
+                label = { Text(item.label) }
+            )
+        }
+    }
+}
+
+data class BottomNavItem(val label: String, val route: String)

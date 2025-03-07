@@ -1,6 +1,5 @@
-package fr.isen.casolari.isensmartcompanion.network
+package fr.isen.casolari.isensmartcompanion
 
-import fr.isen.casolari.isensmartcompanion.IsenEvent
 import retrofit2.http.GET
 
 interface EventApiService {
